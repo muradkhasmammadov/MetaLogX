@@ -1,26 +1,33 @@
-from django.shortcuts import render
+from django.shortcuts import redirect, render
+from django.urls import reverse
 import pandas as pd
 from django.http import JsonResponse
 from django.http import FileResponse
 
 def home(request):
     if request.method == 'POST':
-        return process_uploaded_file(request)
+        num_mrs = request.POST.get('num_mrs')
+        # Redirect to the metalogs page with num_mrs in the URL
+        return redirect(reverse('metalogs') + f'?num_mrs={num_mrs}')
 
     return render(request, 'metalogs/home.html')
 
-
 def metalogs(request):
-    if request.method == 'POST':
-        return metalogs(request)
-    
-    return render(request, 'metalogs/metalogs.html', get_initial_context())
+    num_mrs = request.GET.get('num_mrs')
+
+    if request.method == 'GET':
+        return render(request, 'metalogs/metalogs.html', get_initial_context())
+
+    elif request.method == 'POST':
+        # Use num_mrs if needed
+        return process_uploaded_file(request, num_mrs)
 
 
-def process_uploaded_file(request):
+
+
+def process_uploaded_file(request, num_mrs):
     uploaded_file = request.FILES.get('file')
-    num_mrs = 6
-    print(num_mrs)
+    print("Number of mrs: ",num_mrs)
     if not uploaded_file:
         return JsonResponse({'error': 'No file uploaded'}, status=400)
 
@@ -84,15 +91,17 @@ def get_chart_data(log_csv):
     return {'labels': labels, 'data': data}
 
 def get_chart_data2(log_csv):
-    checker_columns = ['MR1_checker', 'MR2_checker', 'MR3_checker', 'MR4_checker', 'MR5_checker', 'MR6_checker']
+    checker_columns = log_csv.filter(like='_checker').columns
+    print(checker_columns)
     crashed_rows = log_csv[checker_columns].apply(lambda x: x[~x.isin(['Violated', 'Not-violated'])].count())
-    labels = checker_columns
+    labels = checker_columns.tolist()
     data = crashed_rows.tolist()
     return {'labels': labels, 'data': data}
 
 def get_chart_data3(log_csv):
     chart_data3_list = []
-    required_columns = log_csv.columns[7:]
+    required_columns = log_csv.filter(like='_checker').columns
+    print(required_columns)
     
     for idx, column in enumerate(required_columns):
         rule_name = column.replace("_checker", "")
