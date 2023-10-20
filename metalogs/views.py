@@ -1,13 +1,13 @@
 from django.shortcuts import redirect, render
 from django.urls import reverse
 import pandas as pd
+from django.contrib import messages
 from django.http import JsonResponse
 from django.http import FileResponse
 
 def home(request):
     if request.method == 'POST':
         num_mrs = request.POST.get('num_mrs')
-        # Redirect to the metalogs page with num_mrs in the URL
         return redirect(reverse('metalogs') + f'?num_mrs={num_mrs}')
 
     return render(request, 'metalogs/home.html')
@@ -18,8 +18,13 @@ def metalogs(request):
     if request.method == 'GET':
         return render(request, 'metalogs/metalogs.html', get_initial_context())
 
-    elif request.method == 'POST':
-        # Use num_mrs if needed
+    result = process_uploaded_file(request, num_mrs)
+    
+    if isinstance(result, dict):
+        return render(request, 'metalogs/charts.html', result)
+    elif result == 'upload':
+        return render(request, 'metalogs/metalogs.html')
+    else:
         return process_uploaded_file(request, num_mrs)
 
 
@@ -27,34 +32,38 @@ def metalogs(request):
 
 def process_uploaded_file(request, num_mrs):
     uploaded_file = request.FILES.get('file')
-    print("Number of mrs: ",num_mrs)
     if not uploaded_file:
-        return JsonResponse({'error': 'No file uploaded'}, status=400)
-
+        messages.error(request, 'No file uploaded')
+        return 'upload'
+    
     try:
         log_csv = pd.read_csv(uploaded_file)
         is_multiple_type = request.POST.get('analysis_option') == 'multiple'
         missing_columns = get_missing_columns(log_csv, is_multiple_type, int(num_mrs))
 
-        
         if missing_columns:
-            return JsonResponse({'error': f'Missing columns in log file: {", ".join(missing_columns)}'}, status=400)
-
+            messages.error(request, f'Missing columns in log file: {", ".join(missing_columns)}')
+            return 'upload'
+        
         chart_data = get_chart_data(log_csv)
         chart_data2 = get_chart_data2(log_csv)
         chart_data3 = get_chart_data3(log_csv)
-        return render(request, 'metalogs/metalogs.html', {
+        
+        return {
             'missing_columns': None,
             'chart_data': chart_data,
             'chart_data2': chart_data2,
             'chart_data3': chart_data3,
-        })
+        }
 
     except pd.errors.EmptyDataError as e:
-        return JsonResponse({'error': 'The uploaded file is empty or in an unsupported format.'}, status=400)
+        messages.error(request, 'The uploaded file is empty or in an unsupported format.')
+        return 'upload'
 
     except Exception as e:
-        return JsonResponse({'error': f'Error processing file: {str(e)}'}, status=400)
+        messages.error(request, f'Error processing file: {str(e)}')
+        return 'upload'
+
 
 def get_initial_context():
     return {
@@ -92,7 +101,6 @@ def get_chart_data(log_csv):
 
 def get_chart_data2(log_csv):
     checker_columns = log_csv.filter(like='_checker').columns
-    print(checker_columns)
     crashed_rows = log_csv[checker_columns].apply(lambda x: x[~x.isin(['Violated', 'Not-violated'])].count())
     labels = checker_columns.tolist()
     data = crashed_rows.tolist()
@@ -101,7 +109,6 @@ def get_chart_data2(log_csv):
 def get_chart_data3(log_csv):
     chart_data3_list = []
     required_columns = log_csv.filter(like='_checker').columns
-    print(required_columns)
     
     for idx, column in enumerate(required_columns):
         rule_name = column.replace("_checker", "")

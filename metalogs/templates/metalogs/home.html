@@ -47,16 +47,14 @@
             }, 3000);
         }
 
-        // function validateForm() {
-        //     var singleAnalysis = document.getElementById('single-analysis');
-        //     var multipleAnalysis = document.getElementById('multiple-analysis');
-
-        //     if (!singleAnalysis.checked && !multipleAnalysis.checked) {
-        //         alert('Please choose a log file type (Single/Multiple) before uploading.');
-        //         return false; // Prevent form submission if neither option is selected
-        //     }
-        //     return true; // Allow form submission if one of the options is selected
-        // }
+        function validateForm() {
+            var selectedOption = document.querySelector('select').value;
+            if (selectedOption == "Choose file type!") {
+                alert('Please choose a log file type (Single/Multiple) before uploading.');
+                return false; 
+            }
+            return true;
+        }
 
     </script>
 </body>
