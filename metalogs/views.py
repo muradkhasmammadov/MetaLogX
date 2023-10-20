@@ -48,12 +48,18 @@ def process_uploaded_file(request, num_mrs):
         chart_data = get_chart_data(log_csv)
         chart_data2 = get_chart_data2(log_csv)
         chart_data3 = get_chart_data3(log_csv)
+        chart_data4 = get_chart_data4(log_csv)
+        chart_data5 = get_chart_data5(log_csv)
+        chart_data6 = get_chart_data5(log_csv)
         
         return {
             'missing_columns': None,
             'chart_data': chart_data,
             'chart_data2': chart_data2,
             'chart_data3': chart_data3,
+            'chart_data4': chart_data4,
+            'chart_data5': chart_data5,
+            'chart_data6': chart_data6,
         }
 
     except pd.errors.EmptyDataError as e:
@@ -61,7 +67,7 @@ def process_uploaded_file(request, num_mrs):
         return 'upload'
 
     except Exception as e:
-        messages.error(request, f'Error processing file: {str(e)}')
+        messages.error(request, f'Error processing file: Something went wrong with the uploaded file. Check if number of MRs match with the file!')
         return 'upload'
 
 
@@ -69,27 +75,31 @@ def get_initial_context():
     return {
         'missing_columns': None,
         'chart_data': None,
-        'chart_data2': {'labels': [], 'data': []},
-        'chart_data3': None,
+        'chart_data2': None,
+        'chart_data3': {'labels': [], 'data': []},
+        'chart_data4': None,
+        'chart_data5': None,
+        'chart_data6': None,
     }
 
 def get_missing_columns(log_csv, is_multiple_type, num_mrs):
     all_columns = log_csv.columns
+    if  len(all_columns) == 2 * num_mrs + 2:
+        if is_multiple_type:
+            mr_columns = [
+                f"input_testData",
+                f"output_testInput",
+                f"output_MR",
+                f"MR_checker",
+            ]
+            required_columns = [f"{col}_MR{i}" for i in range(1, num_mrs + 1) for col in mr_columns]
+        else:
+            mr_checker_columns = [f"MR{i}_checker" for i in range(1, num_mrs + 1)]
+            required_columns = [
+                # "input_testData",
+                "output_testInput",
+            ] + [f"output_MR{i}" for i in range(1, num_mrs + 1)] + mr_checker_columns
 
-    if is_multiple_type:
-        mr_columns = [
-            f"input_testData",
-            f"output_testInput",
-            f"output_MR",
-            f"MR_checker",
-        ]
-        required_columns = [f"{col}_MR{i}" for i in range(1, num_mrs + 1) for col in mr_columns]
-    else:
-        mr_checker_columns = [f"MR{i}_checker" for i in range(1, num_mrs + 1)]
-        required_columns = [
-            # "input_testData",
-            "output_testInput",
-        ] + [f"output_MR{i}" for i in range(1, num_mrs + 1)] + mr_checker_columns
     print(required_columns)
     return [col for col in required_columns if col not in log_csv.columns]
 
@@ -100,14 +110,29 @@ def get_chart_data(log_csv):
     return {'labels': labels, 'data': data}
 
 def get_chart_data2(log_csv):
+    rule_violations = log_csv.iloc[:, 8:].apply(lambda x: (x == 'Not-violated').sum())
+    labels = log_csv.columns[8:].tolist()
+    data = rule_violations.tolist()
+    return {'labels': labels, 'data': data}
+
+def get_chart_data3(log_csv):
     checker_columns = log_csv.filter(like='_checker').columns
     crashed_rows = log_csv[checker_columns].apply(lambda x: x[~x.isin(['Violated', 'Not-violated'])].count())
     labels = checker_columns.tolist()
     data = crashed_rows.tolist()
     return {'labels': labels, 'data': data}
 
-def get_chart_data3(log_csv):
-    chart_data3_list = []
+def get_chart_data4(log_csv):
+    checker_columns = log_csv.filter(like='_checker').columns
+    not_crashed_rows = log_csv[checker_columns].apply(lambda x: x[x.isin(['Violated', 'Not-violated'])].count())
+    labels = checker_columns.tolist()
+    data = not_crashed_rows.tolist()
+    return {'labels': labels, 'data': data}
+
+
+
+def get_chart_data5(log_csv):
+    chart_data5_list = []
     required_columns = log_csv.filter(like='_checker').columns
     
     for idx, column in enumerate(required_columns):
@@ -120,14 +145,40 @@ def get_chart_data3(log_csv):
         cleaned_values = violated_rows[output_column].apply(pd.to_numeric, errors='coerce').dropna()
 
         if not cleaned_values.empty:
-            chart_data3_list.append({
+            chart_data5_list.append({
                 'label': f'{output_column} for {rule_name} Violations',
                 'data': cleaned_values.tolist(),
-                'backgroundColor': 'rgba(255, 99, 132, 0.2)',
-                'borderColor': 'rgba(255, 99, 132, 1)',
+                'backgroundColor': 'rgba(255, 125, 77, 0.5)',
+                'borderColor': 'rgba(255, 125, 77, 1)',
                 'borderWidth': 1,
             })
 
-    labels = [item['label'] for item in chart_data3_list]
-    datasets = chart_data3_list
+    labels = [item['label'] for item in chart_data5_list]
+    datasets = chart_data5_list
+    return {'labels': labels, 'datasets': datasets}
+
+def get_chart_data6(log_csv):
+    chart_data_list = []
+    required_columns = log_csv.filter(like='_checker').columns
+    
+    for idx, column in enumerate(required_columns):
+        rule_name = column.replace("_checker", "")
+        non_violated_rows = log_csv[log_csv[column] == 'Not-violated']  
+        output_column = f'output_{rule_name}'
+        
+        if output_column not in log_csv.columns:
+            continue  
+        cleaned_values = non_violated_rows[output_column].apply(pd.to_numeric, errors='coerce').dropna()
+
+        if not cleaned_values.empty:
+            chart_data_list.append({
+                'label': f'{output_column} for {rule_name} Non-Violations',  
+                'data': cleaned_values.tolist(),
+                'backgroundColor': 'rgba(77, 125, 255, 0.5)',  
+                'borderColor': 'rgba(77, 125, 255, 1)',
+                'borderWidth': 1,
+            })
+
+    labels = [item['label'] for item in chart_data_list]
+    datasets = chart_data_list
     return {'labels': labels, 'datasets': datasets}

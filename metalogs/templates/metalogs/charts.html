@@ -13,7 +13,7 @@
     <link rel="stylesheet" type="text/css" href="{% static 'charts.css' %}">
 </head>
 <body>
-    <div class="container mt-4">
+    <div class="container mt-4 mt-3">
         <h1>MetaExploreX</h1>
         <div id="cancel-section">
             <form action="{% url 'home' %}" class="analysis-options" method="GET" enctype="multipart/form-data" id="upload-form">
@@ -21,14 +21,28 @@
             </form>
         </div>
 
-        <div class="chart-container">
+        <div class="chart-container mt-3">
             <canvas id="chart1"></canvas>
         </div>
         <div class="chart-container">
             <canvas id="chart2"></canvas>
         </div>
-        <div class="chart3">
+        <div class="chart-container">
             <canvas id="chart3"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart4"></canvas>
+        </div>
+        <div class="chart5">
+            <canvas id="chart5"></canvas>
+        </div>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <div class="chart6">
+            <canvas id="chart6"></canvas>
         </div>
     </div>
 
@@ -42,7 +56,7 @@
         }
         return colors;
     }
-    var numMRs = {{ chart_data.labels|length }}; 
+var numMRs = {{ chart_data.labels|length }}; 
 
 var chartData = {
     labels: {{chart_data.labels|safe}},
@@ -76,10 +90,10 @@ var myChart = new Chart(ctx, {
 });
 
 var chartData2 = {
-    labels: {{chart_data2.labels|safe}} ,
+    labels: {{chart_data2.labels|safe}},
     datasets: [{
-        label: 'Crashed MRs',
-        data: {{chart_data2.data|safe}},
+        label: 'Number of Non Violations',
+        data:  {{chart_data2.data|safe}},
         backgroundColor: generateRandomColors(numMRs),
         borderColor: generateRandomColors(numMRs),
         borderWidth: 1
@@ -87,10 +101,41 @@ var chartData2 = {
 };
 
 var ctx2 = document.getElementById('chart2').getContext('2d');
-let delayed;
 var myChart2 = new Chart(ctx2, {
-    type: 'bar',
+    type: 'doughnut',
     data: chartData2,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        },
+        title: {
+                display: true,
+                text: 'Distribution of Non Violations by Metamorphic Rule'
+            }
+
+    }
+});
+
+var chartData3 = {
+    labels: {{chart_data3.labels|safe}} ,
+    datasets: [{
+        label: 'Crashed MRs',
+        data: {{chart_data3.data|safe}},
+        backgroundColor: generateRandomColors(numMRs),
+        borderColor: generateRandomColors(numMRs),
+        borderWidth: 1
+    }]
+};
+
+var ctx3 = document.getElementById('chart3').getContext('2d');
+let delayed;
+var myChart3 = new Chart(ctx3, {
+    type: 'bar',
+    data: chartData3,
     options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -118,15 +163,58 @@ var myChart2 = new Chart(ctx2, {
     }
 });
 
-var chartData3 = {
-    labels: {{chart_data3.labels|safe}},
-    datasets: {{chart_data3.datasets|safe}} 
+
+var chartData4 = {
+    labels: {{chart_data4.labels|safe}} ,
+    datasets: [{
+        label: 'Crashed MRs',
+        data: {{chart_data4.data|safe}},
+        backgroundColor: generateRandomColors(numMRs),
+        borderColor: generateRandomColors(numMRs),
+        borderWidth: 1
+    }]
 };
 
-var ctx3 = document.getElementById('chart3').getContext('2d');
-var myChart3 = new Chart(ctx3, {
+var ctx4 = document.getElementById('chart4').getContext('2d');
+var myChart4 = new Chart(ctx4, {
     type: 'bar',
-    data: chartData3,
+    data: chartData4,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        },
+        animation: {
+        onComplete: () => {
+            delayed = true;
+        },
+        delay: (context) => {
+            let delay = 0;
+            if (context.type === 'data' && context.mode === 'default' && !delayed) {
+            delay = context.dataIndex * 300 + context.datasetIndex * 100;
+            }
+            return delay;
+        },
+},
+        title: {
+                display: true,
+                text: 'Counts of Values in MR Checker Columns'
+            }
+    }
+});
+
+var chartData5 = {
+    labels: {{chart_data5.labels|safe}},
+    datasets: {{chart_data5.datasets|safe}} 
+};
+
+var ctx5 = document.getElementById('chart5').getContext('2d');
+var myChart5 = new Chart(ctx5, {
+    type: 'bar',
+    data: chartData5,
     options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -137,6 +225,30 @@ var myChart3 = new Chart(ctx3, {
             title: {
                 display: true,
                 text: 'Distribution of Output Values for MR Violations'
+            }
+    },
+}                                                                      
+});
+
+var chartData6 = {
+    labels: {{chart_data6.labels|safe}},
+    datasets: {{chart_data6.datasets|safe}} 
+};
+
+var ctx6 = document.getElementById('chart6').getContext('2d');
+var myChart6 = new Chart(ctx6, {
+    type: 'bar',
+    data: chartData6,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'top',
+            },
+            title: {
+                display: true,
+                text: 'Distribution of Output Values for MR Nonviolations'
             }
     },
 }                                                                      
