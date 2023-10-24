@@ -81,11 +81,12 @@ var myChart = new Chart(ctx, {
                 beginAtZero: true
             }
         },
+    plugins:{
         title: {
                 display: true,
                 text: 'Distribution of Violations by Metamorphic Rule'
             }
-
+        }
     }
 });
 
@@ -112,11 +113,12 @@ var myChart2 = new Chart(ctx2, {
                 beginAtZero: true
             }
         },
+    plugins:{
         title: {
                 display: true,
                 text: 'Distribution of Non Violations by Metamorphic Rule'
             }
-
+        }
     }
 });
 
@@ -156,10 +158,12 @@ var myChart3 = new Chart(ctx3, {
             return delay;
         },
 },
+    plugins:{
         title: {
                 display: true,
                 text: 'Counts of Crashed Values in MR Checker Columns'
             }
+        }
     }
 });
 
@@ -187,6 +191,12 @@ var myChart4 = new Chart(ctx4, {
                 beginAtZero: true
             }
         },
+        plugins: {
+            title: {
+                display: true,
+                text: 'Counts of Not Crashed Values in MR Checker Columns' 
+            }
+        },
         animation: {
         onComplete: () => {
             delayed = true;
@@ -199,10 +209,6 @@ var myChart4 = new Chart(ctx4, {
             return delay;
         },
 },
-        title: {
-                display: true,
-                text: 'Counts of Values in MR Checker Columns'
-            }
     }
 });
 

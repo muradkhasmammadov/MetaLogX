@@ -8,37 +8,41 @@ from django.http import FileResponse
 def home(request):
     if request.method == 'POST':
         num_mrs = request.POST.get('num_mrs')
-        return redirect(reverse('metalogs') + f'?num_mrs={num_mrs}')
+        file_type = request.POST.get('file_type')
+        return redirect(reverse('metalogs') + f'?num_mrs={num_mrs}&file_type={file_type}')
 
     return render(request, 'metalogs/home.html')
 
 def metalogs(request):
     num_mrs = request.GET.get('num_mrs')
-
+    file_type = request.GET.get('file_type')
+    print("type:", file_type)
     if request.method == 'GET':
         return render(request, 'metalogs/metalogs.html', get_initial_context())
 
-    result = process_uploaded_file(request, num_mrs)
+    result = process_uploaded_file(request, num_mrs, file_type)
     
     if isinstance(result, dict):
         return render(request, 'metalogs/charts.html', result)
     elif result == 'upload':
         return render(request, 'metalogs/metalogs.html')
     else:
-        return process_uploaded_file(request, num_mrs)
+        return process_uploaded_file(request, num_mrs, file_type)
 
 
 
 
-def process_uploaded_file(request, num_mrs):
+def process_uploaded_file(request, num_mrs, file_type):
     uploaded_file = request.FILES.get('file')
+    print("type2:", file_type)
     if not uploaded_file:
         messages.error(request, 'No file uploaded')
         return 'upload'
     
     try:
         log_csv = pd.read_csv(uploaded_file)
-        is_multiple_type = request.POST.get('analysis_option') == 'multiple'
+        is_multiple_type = file_type == 'multiple'
+        print(is_multiple_type)
         missing_columns = get_missing_columns(log_csv, is_multiple_type, int(num_mrs))
 
         if missing_columns:
@@ -84,15 +88,17 @@ def get_initial_context():
 
 def get_missing_columns(log_csv, is_multiple_type, num_mrs):
     all_columns = log_csv.columns
+    print("all columns: ", all_columns)
     if  len(all_columns) == 2 * num_mrs + 2:
         if is_multiple_type:
             mr_columns = [
-                f"input_testData",
+                # f"input_testData",
                 f"output_testInput",
                 f"output_MR",
                 f"MR_checker",
             ]
-            required_columns = [f"{col}_MR{i}" for i in range(1, num_mrs + 1) for col in mr_columns]
+            required_columns = ['output_testInput', 'output_MR', 'MR_checker']
+            print("Multiple required columns: ",required_columns)
         else:
             mr_checker_columns = [f"MR{i}_checker" for i in range(1, num_mrs + 1)]
             required_columns = [
@@ -100,18 +106,21 @@ def get_missing_columns(log_csv, is_multiple_type, num_mrs):
                 "output_testInput",
             ] + [f"output_MR{i}" for i in range(1, num_mrs + 1)] + mr_checker_columns
 
-    print(required_columns)
     return [col for col in required_columns if col not in log_csv.columns]
 
 def get_chart_data(log_csv):
-    rule_violations = log_csv.iloc[:, 8:].apply(lambda x: (x == 'Violated').sum())
-    labels = log_csv.columns[8:].tolist()
+    checker_columns = log_csv.filter(like='_checker').columns
+    rule_violations = log_csv[checker_columns].apply(lambda x: (x == 'Violated').sum())
+    labels = checker_columns.tolist()
     data = rule_violations.tolist()
+    print("checkers ", checker_columns)
+    print("labels", labels)
     return {'labels': labels, 'data': data}
 
 def get_chart_data2(log_csv):
-    rule_violations = log_csv.iloc[:, 8:].apply(lambda x: (x == 'Not-violated').sum())
-    labels = log_csv.columns[8:].tolist()
+    checker_columns = log_csv.filter(like='_checker').columns
+    rule_violations = log_csv[checker_columns].apply(lambda x: (x == 'Not-violated').sum())
+    labels = checker_columns.tolist()
     data = rule_violations.tolist()
     return {'labels': labels, 'data': data}
 
