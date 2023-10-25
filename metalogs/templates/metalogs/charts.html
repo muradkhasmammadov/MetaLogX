@@ -846,7 +846,6 @@ var myChart = new Chart(ctx7, {
 });
 
 
-// Function to show the overlay and info box
 function showInfoBox(content) {
     var overlay = document.getElementById('overlay');
     var infoBox = document.getElementById('info-box');
@@ -858,7 +857,6 @@ function showInfoBox(content) {
     infoBox.style.display = 'block';
 }
 
-// Add event listeners for each chart element after the charts have been created
 myChart1.options.onClick = function (e, elements) {
     if (elements[0]) {
         var index = elements[0].index;
@@ -875,9 +873,7 @@ myChart2.options.onClick = function (e, elements) {
     }
 };
 
-// Repeat the above block of code for other chart elements (myChart3, myChart4, etc.)
 
-// Close the info box when the overlay is clicked
 document.getElementById('overlay').addEventListener('click', function () {
     document.getElementById('overlay').style.display = 'none';
     document.getElementById('info-box').style.display = 'none';
