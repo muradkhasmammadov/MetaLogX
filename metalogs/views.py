@@ -55,6 +55,7 @@ def process_uploaded_file(request, num_mrs, file_type):
         chart_data4 = get_chart_data4(log_csv)
         chart_data5 = get_chart_data5(log_csv)
         chart_data6 = get_chart_data5(log_csv)
+        chart_data7 = get_chart_data7(log_csv)
         
         return {
             'missing_columns': None,
@@ -64,6 +65,7 @@ def process_uploaded_file(request, num_mrs, file_type):
             'chart_data4': chart_data4,
             'chart_data5': chart_data5,
             'chart_data6': chart_data6,
+            'chart_data7': chart_data7,
         }
 
     except pd.errors.EmptyDataError as e:
@@ -84,6 +86,7 @@ def get_initial_context():
         'chart_data4': None,
         'chart_data5': None,
         'chart_data6': None,
+        'chart_data7': None,
     }
 
 def get_missing_columns(log_csv, is_multiple_type, num_mrs):
@@ -174,20 +177,37 @@ def get_chart_data6(log_csv):
         rule_name = column.replace("_checker", "")
         non_violated_rows = log_csv[log_csv[column] == 'Not-violated']  
         output_column = f'output_{rule_name}'
-        
+        print("Non violated", non_violated_rows)
         if output_column not in log_csv.columns:
             continue  
         cleaned_values = non_violated_rows[output_column].apply(pd.to_numeric, errors='coerce').dropna()
-
+        print("Cleaned", cleaned_values)
         if not cleaned_values.empty:
             chart_data_list.append({
                 'label': f'{output_column} for {rule_name} Non-Violations',  
                 'data': cleaned_values.tolist(),
                 'backgroundColor': 'rgba(77, 125, 255, 0.5)',  
-                'borderColor': 'rgba(77, 125, 255, 1)',
+                'borderColor': 'rgba(77, 232, 255, 1)',
                 'borderWidth': 1,
             })
 
     labels = [item['label'] for item in chart_data_list]
     datasets = chart_data_list
     return {'labels': labels, 'datasets': datasets}
+
+
+def get_chart_data7(log_csv):
+    checker_columns = log_csv.filter(like='_checker').columns
+    num_mrs = len(checker_columns)
+    rule_violations = log_csv[checker_columns].apply(lambda x: (x == 'Violated').sum())
+    total_data_points = len(log_csv) * num_mrs
+    print(total_data_points, num_mrs)
+
+    percent_violations = (rule_violations.sum() / total_data_points) * 100
+    percent_non_violations = 100 - percent_violations
+
+    return {
+        'labels': ['Violations', 'Non-violations'],
+        'data': [percent_violations, percent_non_violations],
+        'total_data_points': total_data_points,
+    }
