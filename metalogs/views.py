@@ -8,6 +8,7 @@ from django.http import FileResponse
 def home(request):
     if request.method == 'POST':
         num_mrs = request.POST.get('num_mrs')
+        print("MRsHome: ", num_mrs)
         file_type = request.POST.get('file_type')
         return redirect(reverse('metalogs') + f'?num_mrs={num_mrs}&file_type={file_type}')
 
@@ -16,7 +17,7 @@ def home(request):
 def metalogs(request):
     num_mrs = request.GET.get('num_mrs')
     file_type = request.GET.get('file_type')
-    print("type:", file_type)
+    print("MRs: ", num_mrs)
     if request.method == 'GET':
         return render(request, 'metalogs/metalogs.html', get_initial_context())
 
@@ -33,8 +34,10 @@ def metalogs(request):
 
 
 def process_uploaded_file(request, num_mrs, file_type):
+    if num_mrs is None:
+            messages.error(request, 'Number of MRs is missing.')
+            return 'upload'    
     uploaded_file = request.FILES.get('file')
-    print("type2:", file_type)
     if not uploaded_file:
         messages.error(request, 'No file uploaded')
         return 'upload'
@@ -42,7 +45,6 @@ def process_uploaded_file(request, num_mrs, file_type):
     try:
         log_csv = pd.read_csv(uploaded_file)
         is_multiple_type = file_type == 'multiple'
-        print(is_multiple_type)
         missing_columns = get_missing_columns(log_csv, is_multiple_type, int(num_mrs))
 
         if missing_columns:
@@ -73,7 +75,7 @@ def process_uploaded_file(request, num_mrs, file_type):
         return 'upload'
 
     except Exception as e:
-        messages.error(request, f'Error processing file: Something went wrong with the uploaded file. Check if number of MRs match with the file!')
+        messages.error(request, str(e))
         return 'upload'
 
 
@@ -91,11 +93,12 @@ def get_initial_context():
 
 def get_missing_columns(log_csv, is_multiple_type, num_mrs):
     all_columns = log_csv.columns
-    print("all columns: ", all_columns)
-    if  len(all_columns) == 2 * num_mrs + 2:
+    print(len(all_columns))
+    if  len(all_columns) == 3 * num_mrs + 3:
         if is_multiple_type:
             mr_columns = [
-                # f"input_testData",
+                f"input_testData",
+                f"MR_Transformed",
                 f"output_testInput",
                 f"output_MR",
                 f"MR_checker",
@@ -104,11 +107,14 @@ def get_missing_columns(log_csv, is_multiple_type, num_mrs):
             print("Multiple required columns: ",required_columns)
         else:
             mr_checker_columns = [f"MR{i}_checker" for i in range(1, num_mrs + 1)]
+            transformed_test_columns = [f"MR{i}_Transformed" for i in range(1, num_mrs + 1)]
+            print("transformed columns: ", transformed_test_columns)
             required_columns = [
-                # "input_testData",
+                "input_testData",
+                *transformed_test_columns,
                 "output_testInput",
-            ] + [f"output_MR{i}" for i in range(1, num_mrs + 1)] + mr_checker_columns
-
+            ] + [f"output_MR{i}" for i in range(1, num_mrs + 1)] + mr_checker_columns 
+            print("req columns: ", required_columns)
     return [col for col in required_columns if col not in log_csv.columns]
 
 def get_chart_data(log_csv):
@@ -116,8 +122,6 @@ def get_chart_data(log_csv):
     rule_violations = log_csv[checker_columns].apply(lambda x: (x == 'Violated').sum())
     labels = checker_columns.tolist()
     data = rule_violations.tolist()
-    print("checkers ", checker_columns)
-    print("labels", labels)
     return {'labels': labels, 'data': data}
 
 def get_chart_data2(log_csv):
@@ -177,11 +181,9 @@ def get_chart_data6(log_csv):
         rule_name = column.replace("_checker", "")
         non_violated_rows = log_csv[log_csv[column] == 'Not-violated']  
         output_column = f'output_{rule_name}'
-        print("Non violated", non_violated_rows)
         if output_column not in log_csv.columns:
             continue  
         cleaned_values = non_violated_rows[output_column].apply(pd.to_numeric, errors='coerce').dropna()
-        print("Cleaned", cleaned_values)
         if not cleaned_values.empty:
             chart_data_list.append({
                 'label': f'{output_column} for {rule_name} Non-Violations',  
@@ -201,7 +203,6 @@ def get_chart_data7(log_csv):
     num_mrs = len(checker_columns)
     rule_violations = log_csv[checker_columns].apply(lambda x: (x == 'Violated').sum())
     total_data_points = len(log_csv) * num_mrs
-    print(total_data_points, num_mrs)
 
     percent_violations = (rule_violations.sum() / total_data_points) * 100
     percent_non_violations = 100 - percent_violations
