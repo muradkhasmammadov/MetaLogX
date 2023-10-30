@@ -830,7 +830,7 @@ var chartData7 = {
 };
 
 var ctx7 = document.getElementById('chart7').getContext('2d');
-var myChart = new Chart(ctx7, {
+var myChart7 = new Chart(ctx7, {
     type: 'doughnut',
     data: chartData7,
     options: {
@@ -846,12 +846,28 @@ var myChart = new Chart(ctx7, {
 });
 
 
-function showInfoBox(content) {
+function showInfoBox(content, chartData, selectedMR, inputTestData, violated_MRchecker, outputTestInput) {
     var overlay = document.getElementById('overlay');
     var infoBox = document.getElementById('info-box');
     var infoContent = document.getElementById('info-content');
 
-    infoContent.innerHTML = content;
+    var selectedIndex = chartData.labels.indexOf(selectedMR);
+
+    var tableHTML = '<table class="table table-bordered">';
+    if (selectedIndex !== -1) {
+        tableHTML += `<tr><th>InputTestData</th><th>TransformedMR</th><th>OutputInputData</th><th>OutputMR</th><th>${selectedMR}</th><th>NumberOfViolations</th></tr>`;
+        tableHTML += '<tr>';
+        tableHTML += '<td>' + inputTestData + '</td>';
+        tableHTML += '<td>' + violated_MRchecker + '</td>'; 
+        tableHTML += '<td>' + outputTestInput + '</td>';
+        tableHTML += '<td>' + 'bos' + '</td>'; 
+        tableHTML += '<td>' + violated_MRchecker + '</td>'; 
+        tableHTML += '</tr>';
+    }
+
+    tableHTML += '</table>';
+
+    infoContent.innerHTML = content + '<br>' + tableHTML;
 
     overlay.style.display = 'block';
     infoBox.style.display = 'block';
@@ -861,18 +877,23 @@ myChart1.options.onClick = function (e, elements) {
     if (elements[0]) {
         var index = elements[0].index;
         var content = 'Info related to label: ' + myChart1.data.labels[index];
-        showInfoBox(content);
-    }
+        var selectedMR = myChart1.data.labels[index];
+        var inputTestData = {{chart_data.input_testData_with_violations|safe}}.slice(0, 10);
+        var violated_MRchecker = {{ chart_data.violated_MRchecker|safe }}[selectedMR];
+        var outputTestInput = {{chart_data.output_testInput|safe}}.slice(0, 10); 
+
+        showInfoBox(content, chartData, selectedMR, inputTestData, violated_MRchecker, outputTestInput);
+  }
 };
 
 myChart2.options.onClick = function (e, elements) {
     if (elements[0]) {
         var index = elements[0].index;
         var content = 'Info related to label: ' + myChart2.data.labels[index];
-        showInfoBox(content);
+        var selectedMR = myChart2.data.labels[index];
+        showInfoBox(content, chartData2, selectedMR, inputTestData); // Pass inputTestData here
     }
 };
-
 
 document.getElementById('overlay').addEventListener('click', function () {
     document.getElementById('overlay').style.display = 'none';

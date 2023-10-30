@@ -93,7 +93,6 @@ def get_initial_context():
 
 def get_missing_columns(log_csv, is_multiple_type, num_mrs):
     all_columns = log_csv.columns
-    print(len(all_columns))
     if  len(all_columns) == 3 * num_mrs + 3:
         if is_multiple_type:
             mr_columns = [
@@ -108,21 +107,35 @@ def get_missing_columns(log_csv, is_multiple_type, num_mrs):
         else:
             mr_checker_columns = [f"MR{i}_checker" for i in range(1, num_mrs + 1)]
             transformed_test_columns = [f"MR{i}_Transformed" for i in range(1, num_mrs + 1)]
-            print("transformed columns: ", transformed_test_columns)
             required_columns = [
                 "input_testData",
                 *transformed_test_columns,
                 "output_testInput",
             ] + [f"output_MR{i}" for i in range(1, num_mrs + 1)] + mr_checker_columns 
-            print("req columns: ", required_columns)
     return [col for col in required_columns if col not in log_csv.columns]
 
 def get_chart_data(log_csv):
     checker_columns = log_csv.filter(like='_checker').columns
+    input_test_columns = log_csv.filter(like='input_testData').columns
+    output_testInput_columns = log_csv.filter(like='output_testInput').columns
     rule_violations = log_csv[checker_columns].apply(lambda x: (x == 'Violated').sum())
+
+    violated_checker_columns = checker_columns[log_csv[checker_columns].eq('Violated').any()]
+    input_testData_with_violations = log_csv[input_test_columns].loc[log_csv[violated_checker_columns].eq('Violated').any(axis=1)].values.tolist() 
+    output_testInput = log_csv[output_testInput_columns].loc[log_csv[violated_checker_columns].eq('Violated').any(axis=1)].values.tolist() 
+    violated_MRchecker = {col: log_csv[col].tolist() for col in checker_columns}
+    
+
+    print("Rulekskkskdks",output_testInput)
     labels = checker_columns.tolist()
     data = rule_violations.tolist()
-    return {'labels': labels, 'data': data}
+    return {
+            'labels': labels, 
+            'data': data, 
+            'input_testData_with_violations': input_testData_with_violations, 
+            'violated_MRchecker': violated_MRchecker,
+            'output_testInput': output_testInput
+            }
 
 def get_chart_data2(log_csv):
     checker_columns = log_csv.filter(like='_checker').columns
