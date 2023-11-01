@@ -126,7 +126,7 @@ def get_chart_data(log_csv):
     violated_MRchecker = {col: log_csv[col].tolist() for col in checker_columns}
     
 
-    print("Rulekskkskdks",output_testInput)
+    # print("Rulekskkskdks",output_testInput)
     labels = checker_columns.tolist()
     data = rule_violations.tolist()
     return {
