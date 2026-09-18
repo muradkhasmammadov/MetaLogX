@@ -14,6 +14,7 @@ def home(request):
 
     return render(request, 'metalogs/home.html')
 
+
 def metalogs(request):
     num_mrs = request.GET.get('num_mrs')
     file_type = request.GET.get('file_type')
